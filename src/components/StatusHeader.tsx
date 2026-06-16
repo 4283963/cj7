@@ -1,9 +1,17 @@
-import { Server, Cpu, HardDrive, Activity, Clock, AlertTriangle } from 'lucide-react';
+import { Server, Cpu, HardDrive, Activity, Clock, AlertTriangle, Layers, ListTodo } from 'lucide-react';
 import { useClusterStore } from '@/store/clusterStore';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+const NAV_ITEMS = [
+  { path: '/cluster/jobs', label: '任务看板', icon: ListTodo },
+  { path: '/cluster/fluid', label: '流线可视化', icon: Layers },
+];
 
 export function StatusHeader() {
   const { dashboardData, lastUpdate, isLoading } = useClusterStore();
   const summary = dashboardData?.summary;
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const formatTime = (date: Date | null) => {
     if (!date) return '--';
@@ -32,6 +40,27 @@ export function StatusHeader() {
             )}
           </span>
         </div>
+      </div>
+
+      <div className="flex gap-1 mb-4 border-b border-lab-border pb-2">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-t-md text-sm font-medium transition-all -mb-[9px] ${
+                isActive
+                  ? 'bg-lab-bg border border-lab-border border-b-lab-bgCard text-lab-running'
+                  : 'text-lab-textMuted hover:text-lab-text hover:bg-lab-bgLight'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {item.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">

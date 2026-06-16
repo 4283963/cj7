@@ -3,8 +3,10 @@ package com.lab.scheduler.service;
 import com.lab.scheduler.common.TaskStatus;
 import com.lab.scheduler.dto.request.BatchProgressRequest;
 import com.lab.scheduler.dto.request.ComputeResultCallback;
+import com.lab.scheduler.dto.request.FluidFieldRequest;
 import com.lab.scheduler.dto.request.ProgressUpdateRequest;
 import com.lab.scheduler.dto.request.SubmitTaskRequest;
+import com.lab.scheduler.dto.response.FluidFieldResponse;
 import com.lab.scheduler.entity.ComputeNode;
 import com.lab.scheduler.entity.ComputeTask;
 import com.lab.scheduler.entity.ConvergenceData;
@@ -561,6 +563,51 @@ public class TaskSchedulerService {
 
     @Autowired(required = false)
     private NodeMonitorService nodeMonitorService;
+
+    public FluidFieldResponse generateFluidField(FluidFieldRequest request) {
+        List<ComputeNode> onlineNodes = nodeMonitorService != null
+                ? nodeMonitorService.getOnlineNodes()
+                : Collections.emptyList();
+
+        if (onlineNodes.isEmpty()) {
+            FluidFieldResponse resp = new FluidFieldResponse();
+            resp.setSuccess(false);
+            resp.setGridSize(request.getGridSize());
+            resp.setMode(request.getMode());
+            resp.setFlowType(request.getFlowType());
+            return resp;
+        }
+
+        ComputeNode targetNode = onlineNodes.get(0);
+        String url = String.format("http://%s:%d/api/compute/fluid/field",
+                targetNode.getHostname(), targetNode.getPort());
+
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("gridSize", request.getGridSize());
+            payload.put("mode", request.getMode());
+            payload.put("flowType", request.getFlowType());
+            payload.put("matrixDimension", request.getMatrixDimension());
+            if (request.getTaskId() != null) {
+                payload.put("taskId", request.getTaskId());
+            }
+
+            ResponseEntity<FluidFieldResponse> resp = fastRestTemplate.postForEntity(
+                    url, payload, FluidFieldResponse.class);
+            return resp.getBody();
+
+        } catch (ResourceAccessException e) {
+            logger.warn("Failed to generate fluid field on node {}: {}", targetNode.getId(), e.getMessage());
+            FluidFieldResponse resp = new FluidFieldResponse();
+            resp.setSuccess(false);
+            return resp;
+        } catch (Exception e) {
+            logger.error("Error generating fluid field", e);
+            FluidFieldResponse resp = new FluidFieldResponse();
+            resp.setSuccess(false);
+            return resp;
+        }
+    }
 
     private String generateTaskId() {
         return "task-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);

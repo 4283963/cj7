@@ -81,3 +81,37 @@ export interface SubmitTaskRequest {
   maxIterations: number;
   splitCount: number;
 }
+
+export interface VelocityGrid {
+  width: number;
+  height: number;
+  u: Float32Array;
+  v: Float32Array;
+  speed: Float32Array;
+  maxSpeed: number;
+  minSpeed: number;
+}
+
+export interface FluidFieldData {
+  taskId: string;
+  gridWidth: number;
+  gridHeight: number;
+  velocityGrid: VelocityGrid;
+  eigenvalueMode: number;
+  flowType: string;
+  generatedAt: string;
+}
+
+export interface SelectionStats {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  gridCells: number;
+  avgVelocity: number;
+  maxVelocity: number;
+  minVelocity: number;
+  avgU: number;
+  avgV: number;
+  vorticity: number;
+}

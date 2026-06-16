@@ -147,6 +147,93 @@ def test_computation():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/compute/fluid/field', methods=['POST'])
+def generate_fluid_field():
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        grid_size = data.get('gridSize', 100)
+        mode = data.get('mode', 0)
+        flow_type = data.get('flowType', 'taylor-green')
+
+        eigenvalues = data.get('eigenvalues')
+        eigenvectors = data.get('eigenvectors')
+
+        if eigenvalues is None or eigenvectors is None:
+            matrix_dim = data.get('matrixDimension', 200)
+            from compute.eigenvalue import compute_eigenvalues
+            matrix = create_random_matrix(matrix_dim, symmetric=True, positive_definite=True)
+            k_eigen = min(20, matrix_dim - 2)
+            eigenvalues, eigenvectors = compute_eigenvalues(
+                matrix, k=k_eigen, tol=1e-4, maxiter=50
+            )
+
+        import numpy as np
+        if isinstance(eigenvalues, list):
+            eigenvalues = np.array(eigenvalues)
+        if isinstance(eigenvectors, list):
+            eigenvectors = np.array(eigenvectors)
+
+        from compute.fluid_dynamics import eigenvalues_to_velocity_field
+
+        result = eigenvalues_to_velocity_field(
+            eigenvalues=eigenvalues,
+            eigenvectors=eigenvectors,
+            grid_size=grid_size,
+            mode=mode,
+            flow_type=flow_type,
+        )
+
+        return jsonify({
+            'success': True,
+            'gridSize': grid_size,
+            'mode': mode,
+            'flowType': flow_type,
+            'velocityField': result,
+            'generatedAt': datetime.now().isoformat()
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/compute/fluid/selection-stats', methods=['POST'])
+def fluid_selection_stats():
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        u_data = data.get('u')
+        v_data = data.get('v')
+        speed_data = data.get('speed')
+        width = data.get('width', 100)
+        height = data.get('height', 100)
+        x0 = int(data.get('x0', 0))
+        y0 = int(data.get('y0', 0))
+        x1 = int(data.get('x1', width - 1))
+        y1 = int(data.get('y1', height - 1))
+
+        if u_data is None or v_data is None:
+            return jsonify({'error': 'u and v are required'}), 400
+
+        import numpy as np
+        u = np.array(u_data, dtype=np.float64).reshape(height, width)
+        v = np.array(v_data, dtype=np.float64).reshape(height, width)
+        if speed_data is not None:
+            speed = np.array(speed_data, dtype=np.float64).reshape(height, width)
+        else:
+            speed = np.sqrt(u * u + v * v)
+
+        from compute.fluid_dynamics import compute_selection_stats
+
+        stats = compute_selection_stats(u, v, speed, x0, y0, x1, y1)
+
+        return jsonify({
+            'success': True,
+            'stats': stats
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.before_request
 def before_request_logging():
     request._start_time = time.time()
