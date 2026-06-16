@@ -5,6 +5,7 @@ import com.lab.scheduler.entity.ComputeTask;
 import com.lab.scheduler.service.TaskSchedulerService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -44,11 +45,19 @@ public class TaskController {
     }
 
     @PostMapping("/{taskId}/cancel")
-    public ResponseEntity<Map<String, String>> cancelTask(@PathVariable String taskId) {
-        boolean cancelled = taskSchedulerService.cancelTask(taskId);
-        if (cancelled) {
-            return ResponseEntity.ok(Map.of("status", "cancelled", "taskId", taskId);
+    public ResponseEntity<Map<String, Object>> cancelTask(@PathVariable String taskId) {
+        Map<String, Object> result = taskSchedulerService.cancelTask(taskId);
+
+        boolean ack = Boolean.TRUE.equals(result.get("acknowledged"));
+        String status = (String) result.get("status");
+
+        if (!ack) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
         }
-        return ResponseEntity.badRequest().body(Map.of("error", "Cannot cancel task", "taskId", taskId));
+
+        if ("CANCELLING".equals(status)) {
+            return ResponseEntity.accepted().body(result);
+        }
+        return ResponseEntity.ok(result);
     }
 }

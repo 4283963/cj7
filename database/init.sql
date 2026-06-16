@@ -35,6 +35,7 @@ CREATE TABLE compute_task (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at DATETIME,
     completed_at DATETIME,
+    cancelled_at DATETIME,
     INDEX idx_task_status (status),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB;

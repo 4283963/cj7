@@ -77,7 +77,36 @@ export default function ClusterJobs() {
 function updateMockData(data: ClusterDashboardData): ClusterDashboardData {
   const newData = JSON.parse(JSON.stringify(data)) as ClusterDashboardData;
 
-  newData.tasks.forEach((task: ComputeTask) => {
+  newData.tasks.forEach((task: ComputeTask & { _cancellingStartMs?: number }) => {
+    if (task.status === 'CANCELLING') {
+      const cancellingStart = task._cancellingStartMs || Date.now();
+      if (!task._cancellingStartMs) {
+        task._cancellingStartMs = Date.now();
+      }
+
+      task.subtasks.forEach((subtask) => {
+        if (subtask.status === 'CANCELLING' || subtask.status === 'RUNNING') {
+          const elapsedMs = Date.now() - cancellingStart;
+          if (elapsedMs > 1500 + Math.random() * 2500) {
+            subtask.status = 'CANCELLED';
+            if (!subtask.computeTimeMs) {
+              subtask.computeTimeMs = Math.floor(Math.random() * 15000) + 2000;
+            }
+          }
+        }
+      });
+
+      const noneStillActive = task.subtasks.every(
+        (s) => ['CANCELLED', 'COMPLETED', 'FAILED'].includes(s.status)
+      );
+      if (noneStillActive) {
+        task.status = 'CANCELLED';
+        task.progressPercent = 100;
+        task.completedAt = new Date().toISOString();
+      }
+      return;
+    }
+
     if (task.status === 'RUNNING' && task.currentIteration < task.totalIterations) {
       task.currentIteration += 1;
       task.progressPercent = (task.currentIteration / task.totalIterations) * 100;
@@ -125,13 +154,18 @@ function updateMockData(data: ClusterDashboardData): ClusterDashboardData {
       (t: ComputeTask) => t.status === 'RUNNING' && t.assignedNodes.includes(node.id)
     ).length;
 
-    const baseLoad = 15 + runningTasks * 25;
+    const cancellingTasks = newData.tasks.filter(
+      (t: ComputeTask) => t.status === 'CANCELLING' && t.assignedNodes.includes(node.id)
+    ).length;
+
+    const activeCount = runningTasks + Math.ceil(cancellingTasks * 0.5);
+    const baseLoad = 15 + activeCount * 25;
     node.cpuUsage = Math.min(98, Math.max(5, baseLoad + (Math.random() - 0.5) * 15));
-    node.memoryUsage = Math.min(95, Math.max(10, 30 + runningTasks * 18 + (Math.random() - 0.5) * 8));
+    node.memoryUsage = Math.min(95, Math.max(10, 30 + activeCount * 18 + (Math.random() - 0.5) * 8));
     node.memoryUsedGB = (node.memoryTotalGB * node.memoryUsage) / 100;
-    node.activeTasks = runningTasks;
+    node.activeTasks = activeCount;
     node.lastHeartbeat = new Date().toISOString();
-    node.status = runningTasks > 0 ? 'BUSY' : 'ONLINE';
+    node.status = activeCount > 0 ? 'BUSY' : 'ONLINE';
   });
 
   if (newData.summary) {

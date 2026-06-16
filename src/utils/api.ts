@@ -56,13 +56,14 @@ export async function submitTask(request: SubmitTaskRequest): Promise<ComputeTas
   return response.json();
 }
 
-export async function cancelTask(taskId: string): Promise<void> {
+export async function cancelTask(taskId: string): Promise<{ acknowledged: boolean; status: string; message?: string }> {
   const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/cancel`, {
     method: 'POST',
   });
-  if (!response.ok) {
+  if (!response.ok && response.status !== 202) {
     throw new Error(`Failed to cancel task ${taskId}`);
   }
+  return response.json();
 }
 
 export function getStatusColor(status: string): string {
@@ -71,6 +72,10 @@ export function getStatusColor(status: string): string {
       return 'text-lab-success';
     case 'RUNNING':
       return 'text-lab-running';
+    case 'CANCELLING':
+      return 'text-lab-warning';
+    case 'CANCELLED':
+      return 'text-lab-textMuted';
     case 'PENDING':
     case 'QUEUED':
       return 'text-lab-pending';
@@ -93,6 +98,10 @@ export function getStatusBgColor(status: string): string {
       return 'bg-lab-success/20 text-lab-success border-lab-success/30';
     case 'RUNNING':
       return 'bg-lab-running/20 text-lab-running border-lab-running/30';
+    case 'CANCELLING':
+      return 'bg-lab-warning/20 text-lab-warning border-lab-warning/30 animate-pulse-soft';
+    case 'CANCELLED':
+      return 'bg-lab-border/50 text-lab-textMuted border-lab-border italic';
     case 'PENDING':
     case 'QUEUED':
       return 'bg-lab-pending/20 text-lab-pending border-lab-pending/30';

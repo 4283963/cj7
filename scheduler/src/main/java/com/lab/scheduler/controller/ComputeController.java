@@ -1,5 +1,6 @@
 package com.lab.scheduler.controller;
 
+import com.lab.scheduler.dto.request.BatchProgressRequest;
 import com.lab.scheduler.dto.request.ComputeResultCallback;
 import com.lab.scheduler.dto.request.ProgressUpdateRequest;
 import com.lab.scheduler.service.TaskSchedulerService;
@@ -25,6 +26,12 @@ public class ComputeController {
     @PostMapping("/progress")
     public ResponseEntity<Map<String, String>> receiveProgressUpdate(@RequestBody ProgressUpdateRequest request) {
         taskSchedulerService.updateProgress(request);
+        return ResponseEntity.ok(Map.of("status", "received"));
+    }
+
+    @PostMapping("/progress/batch")
+    public ResponseEntity<Map<String, String>> receiveProgressBatch(@RequestBody BatchProgressRequest request) {
+        taskSchedulerService.updateProgressBatch(request);
         return ResponseEntity.ok(Map.of("status", "received"));
     }
 }

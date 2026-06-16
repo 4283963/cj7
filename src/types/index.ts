@@ -1,4 +1,4 @@
-export type TaskStatus = 'PENDING' | 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+export type TaskStatus = 'PENDING' | 'QUEUED' | 'RUNNING' | 'CANCELLING' | 'CANCELLED' | 'COMPLETED' | 'FAILED';
 
 export type NodeStatus = 'ONLINE' | 'OFFLINE' | 'BUSY';
 

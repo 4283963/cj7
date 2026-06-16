@@ -48,6 +48,9 @@ public class ComputeTask {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
     @Transient
     private Double progressPercent;
 
